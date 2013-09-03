@@ -51,6 +51,10 @@ NSMutableData*						pendingData;
 	NSStringEncoding					formEncoding;
 }
 
+@property (nonatomic, retain) NSMutableData*	pendingData;
+@property (nonatomic, retain) NSData* boundaryData;
+@property (nonatomic, retain) MultipartMessageHeader* currentHeader;
+
 - (BOOL) appendData:(NSData*) data;
 
 - (id) initWithBoundary:(NSString*) boundary formEncoding:(NSStringEncoding) formEncoding;
