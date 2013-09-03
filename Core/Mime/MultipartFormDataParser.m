@@ -44,6 +44,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 
 @implementation MultipartFormDataParser 
 @synthesize delegate,formEncoding;
+@synthesize boundaryData, pendingData, currentHeader;
 
 - (id) initWithBoundary:(NSString*) boundary formEncoding:(NSStringEncoding) _formEncoding {
     if( nil == (self = [super init]) ){
@@ -53,11 +54,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 		HTTPLogWarn(@"MultipartFormDataParser: init with zero boundary");
 		return nil;
 	}
-    boundaryData = [[@"\r\n--" stringByAppendingString:boundary] dataUsingEncoding:NSASCIIStringEncoding];
+    self.boundaryData = [[@"\r\n--" stringByAppendingString:boundary] dataUsingEncoding:NSASCIIStringEncoding];
 
-    pendingData = [[NSMutableData alloc] init];
+    self.pendingData = [NSMutableData data];
     currentEncoding = contentTransferEncoding_binary;
-	currentHeader = nil;
+	self.currentHeader = nil;
 
 	formEncoding = _formEncoding;
 	reachedEpilogue = NO;
@@ -66,19 +67,26 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
     return self;
 }
 
+- (void)dealloc
+{
+   [boundaryData release];
+   [pendingData release];
+   [currentHeader release];
+   [super dealloc];
+}
 
 - (BOOL) appendData:(NSData *)data { 
     // Can't parse without boundary;
-    if( nil == boundaryData ) {
+    if( nil == self.boundaryData ) {
 		HTTPLogError(@"MultipartFormDataParser: Trying to parse multipart without specifying a valid boundary");
 		assert(false);
         return NO;
     }
     NSData* workingData = data;
 
-    if( pendingData.length ) {
-        [pendingData appendData:data];
-        workingData = pendingData;
+    if( self.pendingData.length ) {
+        [self.pendingData appendData:data];
+        workingData = self.pendingData;
     }
 
 	// the parser saves parse stat in the offset variable, which indicates offset of unhandled part in 
@@ -89,17 +97,17 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 
 	// don't parse data unless its size is greater then boundary length, so we couldn't
 	// misfind the boundary, if it got split into different data chunks
-	NSUInteger sizeToLeavePending = boundaryData.length;
+	NSUInteger sizeToLeavePending = self.boundaryData.length;
 
 	if( !reachedEpilogue && workingData.length <= sizeToLeavePending )  {
 		// not enough data even to start parsing.
 		// save to pending data.
-		if( !pendingData.length ) {
-			[pendingData appendData:data];
+		if( !self.pendingData.length ) {
+			[self.pendingData appendData:data];
 		}
 		if( checkForContentEnd ) {
-			if(	pendingData.length >= 2 ) {
-				if( *(uint16_t*)(pendingData.bytes + offset) == 0x2D2D ) {
+			if(	self.pendingData.length >= 2 ) {
+				if( *(uint16_t*)(self.pendingData.bytes + offset) == 0x2D2D ) {
 					// we found the multipart end. all coming next is an epilogue.
 					HTTPLogVerbose(@"MultipartFormDataParser: End of multipart message");
 					waitingForCRLF = YES;
@@ -144,11 +152,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 				// we haven't got enough data to check for content end.
 				// save current unhandled data (it may be 1 byte) to pending and recheck on next chunk received
 				if( offset < workingData.length ) {
-					[pendingData setData:[NSData dataWithBytes:workingData.bytes + workingData.length-1 length:1]];
+					[self.pendingData setData:[NSData dataWithBytes:workingData.bytes + workingData.length-1 length:1]];
 				}
 				else {
 					// there is no unhandled data now, wait for more chunks
-					[pendingData setData:[NSData data]];
+					[self.pendingData setData:[NSData data]];
 				}
 				return YES;
 			}
@@ -164,11 +172,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 				if( offset ) {
 					// we still have to save the unhandled data (maybe it's 1 byte CR)
 					if( *((char*)workingData.bytes + workingData.length -1) == '\r' ) {
-						[pendingData setData:[NSData dataWithBytes:workingData.bytes + workingData.length-1 length:1]];
+						[self.pendingData setData:[NSData dataWithBytes:workingData.bytes + workingData.length-1 length:1]];
 					}
 					else {
 						// or save nothing if it wasnt 
-						[pendingData setData:[NSData data]];
+						[self.pendingData setData:[NSData data]];
 					}
 				}
 				return YES;
@@ -194,7 +202,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 			return YES;
 		}
 
-		if( nil == currentHeader ) {
+		if( nil == self.currentHeader ) {
 			// nil == currentHeader is a state flag, indicating we are waiting for header now.
 			// whenever part is over, currentHeader is set to nil.
 
@@ -203,14 +211,14 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 			int headerEnd = [self findHeaderEnd:workingData fromOffset:offset];
 			if( -1 == headerEnd ) {
 				// didn't recieve the full header yet.
-				if( !pendingData.length) {
+				if( !self.pendingData.length) {
 					// store the unprocessed data till next chunks come
-					[pendingData appendBytes:data.bytes + offset length:data.length - offset];
+					[self.pendingData appendBytes:data.bytes + offset length:data.length - offset];
 				}
 				else {
 					if( offset ) {
 						// save the current parse state; drop all handled data and save unhandled only.
-						pendingData = [[NSMutableData alloc] initWithBytes: (char*) workingData.bytes + offset length:workingData.length - offset];
+						self.pendingData = [NSMutableData dataWithBytes: (char*) workingData.bytes + offset length:workingData.length - offset];
 					}
 				}
 				return  YES;
@@ -219,15 +227,15 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 
 				// let the header parser do it's job from now on.
 				NSData * headerData = [NSData dataWithBytesNoCopy: (char*) workingData.bytes + offset length:headerEnd + 2 - offset freeWhenDone:NO];
-				currentHeader = [[MultipartMessageHeader alloc] initWithData:headerData formEncoding:formEncoding];
+				self.currentHeader = [[[MultipartMessageHeader alloc] initWithData:headerData formEncoding:formEncoding] autorelease];
 
-				if( nil == currentHeader ) {
+				if( nil == self.currentHeader ) {
 					// we've found the data is in wrong format.
 					HTTPLogError(@"MultipartFormDataParser: MultipartFormDataParser: wrong input format, coulnd't get a valid header");
 					return NO;
 				}
                 if( [delegate respondsToSelector:@selector(processStartOfPartWithHeader:)] ) {
-                    [delegate processStartOfPartWithHeader:currentHeader];
+                    [delegate processStartOfPartWithHeader:self.currentHeader];
                 }
 
 				HTTPLogVerbose(@"MultipartFormDataParser: MultipartFormDataParser: Retrieved part header.");
@@ -253,7 +261,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 			if( sizeToPass <= 0 ) {
 				// wait for more data!
 				if( offset ) {
-					[pendingData setData:[NSData dataWithBytes:(char*) workingData.bytes + offset length:workingData.length - offset]];
+					[self.pendingData setData:[NSData dataWithBytes:(char*) workingData.bytes + offset length:workingData.length - offset]];
 				}
 				return YES;
 			}
@@ -263,11 +271,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 			if( [delegate respondsToSelector:@selector(processContent:WithHeader:)] ) {
 				HTTPLogVerbose(@"MultipartFormDataParser: Processed %"FMTNSINT" bytes of body",sizeToPass);
 
-				[delegate processContent: decodedData WithHeader:currentHeader];
+				[delegate processContent: decodedData WithHeader:self.currentHeader];
 			}
 
 			// store the unprocessed data till the next chunks come.
-			[pendingData setData:[NSData dataWithBytes:(char*)workingData.bytes + workingData.length - sizeToLeavePending length:sizeToLeavePending]];
+			[self.pendingData setData:[NSData dataWithBytes:(char*)workingData.bytes + workingData.length - sizeToLeavePending length:sizeToLeavePending]];
 			return YES;
 		}
 		else {
@@ -275,18 +283,18 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 			// Here we found the boundary.
 			// let the delegate process it, and continue going to the next parts.
 			if( [delegate respondsToSelector:@selector(processContent:WithHeader:)] ) {
-				[delegate processContent:[NSData dataWithBytesNoCopy:(char*) workingData.bytes + offset length:contentEnd - offset freeWhenDone:NO] WithHeader:currentHeader];
+				[delegate processContent:[NSData dataWithBytesNoCopy:(char*) workingData.bytes + offset length:contentEnd - offset freeWhenDone:NO] WithHeader:self.currentHeader];
 			}
 
 			if( [delegate respondsToSelector:@selector(processEndOfPartWithHeader:)] ){
-				[delegate processEndOfPartWithHeader:currentHeader];
+				[delegate processEndOfPartWithHeader:self.currentHeader];
 				HTTPLogVerbose(@"MultipartFormDataParser: End of body part");
 			}
-			currentHeader = nil;
+			self.currentHeader = nil;
 
 			// set up offset to continue with the remaining data (if any)
             // cast to int because above comment suggests a small number
-			offset = contentEnd + (int)boundaryData.length;
+			offset = contentEnd + (int)self.boundaryData.length;
 			checkForContentEnd = YES;
 			// setting the flag tells the parser to skip all the data till CRLF
 		}
@@ -331,9 +339,9 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 - (int) processPreamble:(NSData*) data {
 	int offset = 0;
 	
-	char* boundaryBytes = (char*) boundaryData.bytes + 2; // the first boundary won't have CRLF preceding.
+	char* boundaryBytes = (char*) self.boundaryData.bytes + 2; // the first boundary won't have CRLF preceding.
     char* dataBytes = (char*) data.bytes;
-    NSUInteger boundaryLength = boundaryData.length - 2;
+    NSUInteger boundaryLength = self.boundaryData.length - 2;
     NSUInteger dataLength = data.length;
     
 	// find the boundary without leading CRLF.
@@ -358,7 +366,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 				[delegate processPreambleData:preambleData];
 				HTTPLogVerbose(@"MultipartFormDataParser: processed preamble");
 			}
-			pendingData = [NSMutableData dataWithBytes: data.bytes + data.length - boundaryLength length:boundaryLength];
+			self.pendingData = [NSMutableData dataWithBytes: data.bytes + data.length - boundaryLength length:boundaryLength];
 		}
 		return -1;
 	}
@@ -397,9 +405,9 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 
 
 - (int) findContentEnd:(NSData*) data fromOffset:(int) offset {
-    char* boundaryBytes = (char*) boundaryData.bytes;
+    char* boundaryBytes = (char*) self.boundaryData.bytes;
     char* dataBytes = (char*) data.bytes;
-    NSUInteger boundaryLength = boundaryData.length;
+    NSUInteger boundaryLength = self.boundaryData.length;
     NSUInteger dataLength = data.length;
     
     while( offset < dataLength - boundaryLength +1 ) {
