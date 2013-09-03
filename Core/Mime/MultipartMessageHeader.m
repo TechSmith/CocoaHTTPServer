@@ -49,13 +49,13 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 		// the !isspace condition is to support header unfolding
 		if( (*(uint16_t*) (bytes+offset)  == fields_separator) && ((offset == length - 2) || !(isspace(bytes[offset+2])) )) {
 			NSData* fieldData = [NSData dataWithBytesNoCopy:bytes length:offset freeWhenDone:NO];
-			MultipartMessageHeaderField* field = [[MultipartMessageHeaderField alloc] initWithData: fieldData  contentEncoding:formEncoding];
+			MultipartMessageHeaderField* field = [[[MultipartMessageHeaderField alloc] initWithData: fieldData  contentEncoding:formEncoding] autorelease];
 			if( field ) {
 				[fields setObject:field forKey:field.name];
 				HTTPLogVerbose(@"MultipartFormDataParser: Processed Header field '%@'",field.name);
 			}
 			else {
-				NSString* fieldStr = [[NSString  alloc] initWithData:fieldData encoding:NSASCIIStringEncoding];
+				NSString* fieldStr = [[[NSString  alloc] initWithData:fieldData encoding:NSASCIIStringEncoding] autorelease];
 				HTTPLogWarn(@"MultipartFormDataParser: Failed to parse MIME header field. Input ASCII string:%@",fieldStr);
 			}
 
@@ -76,6 +76,12 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 	}
 
 	return self;
+}
+
+- (void)dealloc
+{
+   [fields release];
+   [super dealloc];
 }
 
 - (NSString *)description {	

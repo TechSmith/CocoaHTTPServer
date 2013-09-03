@@ -79,13 +79,22 @@ NSString* extractParamValue(const char* bytes, NSUInteger length, NSStringEncodi
 
 	// parse the "params" part of the header
 	if( ![self parseHeaderValueBytes:bytes length:length encoding:encoding] ) {
-		NSString* paramsStr = [[NSString alloc] initWithBytes:bytes length:length encoding:NSASCIIStringEncoding];
+		NSString* paramsStr = [[[NSString alloc] initWithBytes:bytes length:length encoding:NSASCIIStringEncoding] autorelease];
 		HTTPLogError(@"MultipartFormDataParser: Bad params for header with name '%@' and value '%@'",name,value);
 		HTTPLogError(@"MultipartFormDataParser: Params str: %@",paramsStr);
 
 		return nil;		
 	}
 	return self;
+}
+
+- (void)dealloc
+{
+   [name release];
+   [value release];
+   [params release];
+
+   [super dealloc];
 }
 
 -(BOOL) parseHeaderValueBytes:(char*) bytes length:(NSUInteger) length encoding:(NSStringEncoding) encoding {
@@ -109,7 +118,7 @@ NSString* extractParamValue(const char* bytes, NSUInteger length, NSStringEncodi
 				// found '=' before terminating previous param.
 				return NO;
 			}
-			currentParam = [[NSString alloc] initWithBytes:bytes length:offset encoding:NSASCIIStringEncoding];
+			currentParam = [[[NSString alloc] initWithBytes:bytes length:offset encoding:NSASCIIStringEncoding] autorelease];
 
 			bytes+=offset + 1;
 			length -= offset + 1;
@@ -194,10 +203,10 @@ NSString* extractParamValue(const char* bytes, NSUInteger length, NSStringEncodi
 	
 	if( bytes[0] == '"' ) {
 		// values may be quoted. Strip the quotes to get what we need.
-		value = [[NSMutableString alloc] initWithBytes:bytes + 1 length: length - 2 encoding:encoding]; 
+		value = [[[NSMutableString alloc] initWithBytes:bytes + 1 length: length - 2 encoding:encoding] autorelease];
 	}
 	else {
-		value = [[NSMutableString alloc] initWithBytes:bytes length: length encoding:encoding];
+		value = [[[NSMutableString alloc] initWithBytes:bytes length: length encoding:encoding] autorelease];
 	}
 	// restore escaped symbols
 	NSRange range= [value rangeOfString:@"\\"];
