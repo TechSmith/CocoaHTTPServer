@@ -530,7 +530,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN;
 		
 		count++;
 	}
-	return result;
+	return [result autorelease];
 }
 
 
