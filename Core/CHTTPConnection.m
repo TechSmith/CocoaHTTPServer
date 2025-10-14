@@ -1,5 +1,5 @@
-#import "HTTPServer.h"
-#import "HTTPConnection.h"
+#import "CHTTPServer.h"
+#import "CHTTPConnection.h"
 #import "HTTPMessage.h"
 #import "HTTPResponse.h"
 #import "HTTPAuthenticationRequest.h"
@@ -81,7 +81,7 @@
 // the HTTP_RESPONSE tag. For all other segments prior to the last segment use HTTP_PARTIAL_RESPONSE, or some other
 // tag of your own invention.
 
-@interface HTTPConnection (PrivateAPI)
+@interface CHTTPConnection (PrivateAPI)
 - (void)startReadingRequest;
 - (void)sendResponseHeadersAndBody;
 @end
@@ -90,7 +90,7 @@
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@implementation HTTPConnection
+@implementation CHTTPConnection
 
 static dispatch_queue_t recentNonceQueue;
 static NSMutableArray *recentNonces;
@@ -2667,7 +2667,7 @@ static NSMutableArray *recentNonces;
 @synthesize documentRoot;
 @synthesize queue;
 
-- (id)initWithServer:(HTTPServer *)aServer documentRoot:(NSString *)aDocumentRoot
+- (id)initWithServer:(CHTTPServer *)aServer documentRoot:(NSString *)aDocumentRoot
 {
 	if ((self = [super init]))
 	{
@@ -2677,7 +2677,7 @@ static NSMutableArray *recentNonces;
 	return self;
 }
 
-- (id)initWithServer:(HTTPServer *)aServer documentRoot:(NSString *)aDocumentRoot queue:(dispatch_queue_t)q
+- (id)initWithServer:(CHTTPServer *)aServer documentRoot:(NSString *)aDocumentRoot queue:(dispatch_queue_t)q
 {
 	if ((self = [super init]))
 	{

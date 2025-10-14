@@ -2,7 +2,7 @@
 
 @class GCDAsyncSocket;
 @class HTTPMessage;
-@class HTTPServer;
+@class CHTTPServer;
 @class WebSocket;
 @protocol HTTPResponse;
 
@@ -15,15 +15,15 @@
 
 @interface HTTPConfig : NSObject
 {
-	HTTPServer __unsafe_unretained *server;
+	CHTTPServer __unsafe_unretained *server;
 	NSString __strong *documentRoot;
 	dispatch_queue_t queue;
 }
 
-- (id)initWithServer:(HTTPServer *)server documentRoot:(NSString *)documentRoot;
-- (id)initWithServer:(HTTPServer *)server documentRoot:(NSString *)documentRoot queue:(dispatch_queue_t)q;
+- (id)initWithServer:(CHTTPServer *)server documentRoot:(NSString *)documentRoot;
+- (id)initWithServer:(CHTTPServer *)server documentRoot:(NSString *)documentRoot queue:(dispatch_queue_t)q;
 
-@property (nonatomic, unsafe_unretained, readonly) HTTPServer *server;
+@property (nonatomic, unsafe_unretained, readonly) CHTTPServer *server;
 @property (nonatomic, strong, readonly) NSString *documentRoot;
 @property (nonatomic, readonly) dispatch_queue_t queue;
 
@@ -33,7 +33,7 @@
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@interface HTTPConnection : NSObject
+@interface CHTTPConnection : NSObject
 {
 	dispatch_queue_t connectionQueue;
 	GCDAsyncSocket *asyncSocket;
@@ -113,7 +113,7 @@
 
 @end
 
-@interface HTTPConnection (AsynchronousHTTPResponse)
+@interface CHTTPConnection (AsynchronousHTTPResponse)
 - (void)responseHasAvailableData:(NSObject<HTTPResponse> *)sender;
 - (void)responseDidAbort:(NSObject<HTTPResponse> *)sender;
 @end
