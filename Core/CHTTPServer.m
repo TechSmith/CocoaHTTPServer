@@ -1,5 +1,5 @@
-#import "HTTPServer.h"
-#import "HTTPConnection.h"
+#import "CHTTPServer.h"
+#import "CHTTPConnection.h"
 #import "WebSocket.h"
 @import CocoaAsyncSocket;
 
@@ -11,7 +11,7 @@
 //// Other flags: trace
 //static const int httpLogLevel = HTTP_LOG_LEVEL_ERROR; // HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 
-@interface HTTPServer (PrivateAPI)
+@interface CHTTPServer (PrivateAPI)
 
 - (void)unpublishBonjour;
 - (void)publishBonjour;
@@ -25,7 +25,7 @@
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@implementation HTTPServer
+@implementation CHTTPServer
 
 /**
  * Standard Constructor.
@@ -53,7 +53,7 @@
 		asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:serverQueue];
 		
 		// Use default connection class of HTTPConnection
-		connectionClass = [HTTPConnection self];
+		connectionClass = [CHTTPConnection self];
 		
 		// By default bind on all available interfaces, en1, wifi etc
 		interface = nil;
@@ -451,7 +451,7 @@
 		{
 			// Stop all HTTP connections the server owns
          [self->connectionsLock lock];
-         for (HTTPConnection *connection in self->connections)
+         for (CHTTPConnection *connection in self->connections)
 			{
 				[connection stop];
 			}
@@ -545,7 +545,7 @@
 
 - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
-	HTTPConnection *newConnection = (HTTPConnection *)[[connectionClass alloc] initWithAsyncSocket:newSocket
+	CHTTPConnection *newConnection = (CHTTPConnection *)[[connectionClass alloc] initWithAsyncSocket:newSocket
 	                                                                                 configuration:[self config]];
 	[connectionsLock lock];
 	[connections addObject:newConnection];

@@ -1,5 +1,5 @@
 #import "HTTPAsyncFileResponse.h"
-#import "HTTPConnection.h"
+#import "CHTTPConnection.h"
 
 #import <unistd.h>
 #import <fcntl.h>
@@ -33,7 +33,7 @@
 
 @implementation HTTPAsyncFileResponse
 
-- (id)initWithFilePath:(NSString *)fpath forConnection:(HTTPConnection *)parent
+- (id)initWithFilePath:(NSString *)fpath forConnection:(CHTTPConnection *)parent
 {
 	if ((self = [super init]))
 	{

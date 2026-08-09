@@ -45,7 +45,7 @@
 }
 
 - (id)initWithFilePath:(NSString *)filePath
-         forConnection:(HTTPConnection *)connection
+         forConnection:(CHTTPConnection *)connection
              separator:(NSString *)separatorStr
  replacementDictionary:(NSDictionary *)dictionary;
 

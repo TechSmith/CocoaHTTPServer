@@ -1,12 +1,12 @@
 #import <Foundation/Foundation.h>
 #import "HTTPResponse.h"
 
-@class HTTPConnection;
+@class CHTTPConnection;
 
 
 @interface HTTPFileResponse : NSObject <HTTPResponse>
 {
-	HTTPConnection *connection;
+	CHTTPConnection *connection;
 	
 	NSString *filePath;
 	UInt64 fileLength;
@@ -19,7 +19,7 @@
 	NSUInteger bufferSize;
 }
 
-- (id)initWithFilePath:(NSString *)filePath forConnection:(HTTPConnection *)connection;
+- (id)initWithFilePath:(NSString *)filePath forConnection:(CHTTPConnection *)connection;
 - (NSString *)filePath;
 
 @end
